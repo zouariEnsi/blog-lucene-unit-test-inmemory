@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.zouari.blog</groupId>
+        <artifactId>blog-lucene-unit-test-inmemory</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>docker</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Docker Module</name>
+    <description>Module for building Docker images with the application</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.zouari.blog</groupId>
+            <artifactId>backend</artifactId>
+            <version>${project.version}</version>
+            <type>war</type>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-war</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeTypes>war</includeTypes>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <stripVersion>true</stripVersion>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>blog-lucene-app:${project.version}</name>
+                            <build>
+                                <from>jboss/wildfly:25.0.0.Final</from>
+                                <assembly>
+                                    <mode>dir</mode>
+                                    <targetDir>/opt/jboss/wildfly/standalone/deployments</targetDir>
+                                    <inline>
+                                        <fileSets>
+                                            <fileSet>
+                                                <directory>${project.build.directory}</directory>
+                                                <includes>
+                                                    <include>*.war</include>
+                                                </includes>
+                                                <outputDirectory>.</outputDirectory>
+                                            </fileSet>
+                                        </fileSets>
+                                    </inline>
+                                </assembly>
+                                <ports>
+                                    <port>8080</port>
+                                    <port>9990</port>
+                                </ports>
+                                <cmd>
+                                    <shell>/opt/jboss/wildfly/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0</shell>
+                                </cmd>
+                            </build>
+                            <run>
+                                <ports>
+                                    <port>8080:8080</port>
+                                    <port>9990:9990</port>
+                                </ports>
+                            </run>
+                        </image>
+                    </images>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>build-docker-image</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
