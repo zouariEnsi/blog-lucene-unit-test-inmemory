@@ -6,7 +6,7 @@ A blog project demonstrating how to test Apache Lucene search using in-memory in
 
 This is a multi-module Maven project with the following modules:
 
-- **backend**: Java EE 8 application packaged as WAR file
+- **backend**: Jakarta EE 10 application packaged as WAR file
 - **docker**: Module for building Docker images using io.fabric8 docker-maven-plugin
 
 ## Prerequisites
@@ -89,8 +89,15 @@ The indexation functionality implements the **Asynchronous Job Pattern** (also k
 
 This pattern is ideal for long-running operations that would timeout in a synchronous request-response model.
 
+- **WildFly Management Console**: `http://localhost:9990/console`
+  - Username: `admin`
+  - Password: `admin`
+
 ## Technology Stack
 
+- Jakarta EE 10
+- Apache Lucene 9.11.1
+- WildFly 31.0.1.Final (Java 21)
 - Java 21
 - Java EE 8 (Jakarta EE 8)
 - Apache Lucene 9.11.1
@@ -113,7 +120,22 @@ The Lucene index is stored at: `~/lucene-index/`
 ## Docker Module
 
 The docker module uses the `io.fabric8:docker-maven-plugin` to build Docker images. The plugin is configured to:
-- Pull the WildFly 25.0.0.Final base image
+- Pull the WildFly 31.0.1.Final base image (includes Java 21 support)
 - Copy the WAR file to WildFly's deployment directory
 - Expose ports 8080 (HTTP) and 9990 (management)
+- Create default management user (admin/admin)
 - Start WildFly server
+
+## Jakarta EE 10 Migration
+
+This project uses Jakarta EE 10, which requires:
+- **Namespace change**: All `javax.*` imports are replaced with `jakarta.*`
+- **WildFly 31+**: Minimum version that supports Jakarta EE 10
+- **Java 21**: Required for WildFly 31 compatibility
+- **Updated schemas**: web.xml uses Jakarta EE 6.0, beans.xml uses Jakarta EE 3.0
+
+### Key Changes from Java EE 8
+- `javax.ws.rs.*` → `jakarta.ws.rs.*`
+- `javax.servlet.*` → `jakarta.servlet.*`
+- `javax.ejb.*` → `jakarta.ejb.*`
+- Jakarta EE Platform API updated from 8.0.0 to 10.0.0
