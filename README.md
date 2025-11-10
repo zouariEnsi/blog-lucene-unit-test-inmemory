@@ -11,7 +11,7 @@ This is a multi-module Maven project with the following modules:
 
 ## Prerequisites
 
-- Java 11 or higher
+- Java 21
 - Maven 3.6+
 - Docker (for building/running Docker images)
 
@@ -35,18 +35,80 @@ After building, you can run the application using Docker:
 docker run -p 8080:8080 -p 9990:9990 blog-lucene-app:1.0.0-SNAPSHOT
 ```
 
-### Endpoints
+## API Endpoints
 
-- **Health Check**: `http://localhost:8080/blog-lucene-app/api/health-check`
-  - Returns: `OK`
+### Health Check
+- **URL**: `http://localhost:8080/blog-lucene-app/api/health-check`
+- **Method**: GET
+- **Response**: `OK`
+
+### Start Indexation
+- **URL**: `http://localhost:8080/blog-lucene-app/api/indexation/start`
+- **Method**: POST
+- **Description**: Starts the indexation process that fetches 5000 users from randomuser.me API (50 pages × 100 users per page) and indexes them into Lucene
+- **Response**: 
+  ```json
+  {
+    "jobId": "uuid-string",
+    "message": "Indexation started successfully"
+  }
+  ```
+
+### Check Indexation Status
+- **URL**: `http://localhost:8080/blog-lucene-app/api/indexation/status/{jobId}`
+- **Method**: GET
+- **Description**: Checks the status of an indexation job
+- **Response**:
+  ```json
+  {
+    "jobId": "uuid-string",
+    "status": "IN_PROGRESS",
+    "totalPages": 50,
+    "processedPages": 25,
+    "totalUsers": 2500,
+    "message": "Processing page 25 of 50",
+    "startTime": 1699999999999,
+    "endTime": null
+  }
+  ```
+- **Status Values**: 
+  - `NOT_STARTED`: Job ID not found
+  - `IN_PROGRESS`: Indexation is currently running
+  - `COMPLETED`: Indexation finished successfully
+  - `FAILED`: Indexation encountered an error
+
+## Pattern Used: Asynchronous Job Pattern
+
+The indexation functionality implements the **Asynchronous Job Pattern** (also known as **Long-Running Task Pattern** or **Command Pattern with Status Tracking**).
+
+### How it works:
+1. **Fire**: Client sends a POST request to `/indexation/start`
+2. **Acknowledge**: Server immediately returns a job ID without waiting for completion
+3. **Poll**: Client periodically checks the status using GET `/indexation/status/{jobId}`
+4. **Complete**: Status eventually changes to `COMPLETED` or `FAILED`
+
+This pattern is ideal for long-running operations that would timeout in a synchronous request-response model.
 
 ## Technology Stack
 
+- Java 21
 - Java EE 8 (Jakarta EE 8)
-- Apache Lucene 8.11.2
+- Apache Lucene 9.11.1
 - WildFly 25.0.0.Final
+- Jackson 2.15.2 (JSON processing)
 - Maven
 - Docker (via io.fabric8 docker-maven-plugin)
+
+## Features
+
+- **REST Client**: Fetches random user data from https://randomuser.me/api/
+- **Lucene Indexing**: Indexes user data into file-based Lucene index
+- **Async Processing**: Background job execution using ExecutorService
+- **Status Tracking**: Real-time progress monitoring
+
+## Lucene Index Location
+
+The Lucene index is stored at: `~/lucene-index/`
 
 ## Docker Module
 
