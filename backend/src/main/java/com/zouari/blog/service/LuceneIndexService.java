@@ -10,9 +10,8 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.FSDirectory;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,26 +22,30 @@ import java.util.logging.Logger;
 @ApplicationScoped
 public class LuceneIndexService {
     private static final Logger LOGGER = Logger.getLogger(LuceneIndexService.class.getName());
-    private static final String INDEX_DIR = System.getProperty("user.home") + "/lucene-index";
-    
+    private static final String INDEX_DIR = System.getProperty("java.io.tmpdir") + "/lucene-index";
+
     private FSDirectory directory;
     private StandardAnalyzer analyzer;
+    private volatile boolean initialized = false;
 
-    @PostConstruct
-    public void init() {
-        try {
-            Path indexPath = Paths.get(INDEX_DIR);
-            Files.createDirectories(indexPath);
-            this.directory = FSDirectory.open(indexPath);
-            this.analyzer = new StandardAnalyzer();
-            LOGGER.info("Lucene index initialized at: " + INDEX_DIR);
-        } catch (IOException e) {
-            LOGGER.severe("Failed to initialize Lucene index: " + e.getMessage());
-            throw new RuntimeException("Failed to initialize Lucene index", e);
+    private synchronized void ensureInitialized() {
+        if (!initialized) {
+            try {
+                Path indexPath = Paths.get(INDEX_DIR);
+                Files.createDirectories(indexPath);
+                this.directory = FSDirectory.open(indexPath);
+                this.analyzer = new StandardAnalyzer();
+                this.initialized = true;
+                LOGGER.info("Lucene index initialized at: " + INDEX_DIR);
+            } catch (IOException e) {
+                LOGGER.severe("Failed to initialize Lucene index: " + e.getMessage());
+                throw new RuntimeException("Failed to initialize Lucene index", e);
+            }
         }
     }
 
     public synchronized void indexUsers(List<User> users) throws IOException {
+        ensureInitialized();
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
         
@@ -57,6 +60,7 @@ public class LuceneIndexService {
     }
 
     public synchronized void clearIndex() throws IOException {
+        ensureInitialized();
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         config.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
         

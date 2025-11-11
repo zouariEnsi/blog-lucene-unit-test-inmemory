@@ -45,47 +45,72 @@ docker run -p 8080:8080 -p 9990:9990 blog-lucene-app:1.0.0-SNAPSHOT
 ### Start Indexation
 - **URL**: `http://localhost:8080/blog-lucene-app/api/indexation/start`
 - **Method**: POST
-- **Description**: Starts the indexation process that fetches 5000 users from randomuser.me API (50 pages × 100 users per page) and indexes them into Lucene
-- **Response**: 
+- **Description**: Starts an asynchronous indexation job that fetches 5000 users from randomuser.me API (50 pages × 100 users per page) and indexes them into Lucene. Only one indexation can run at a time.
+- **Response (Success)**: 
   ```json
   {
-    "jobId": "uuid-string",
-    "message": "Indexation started successfully"
+    "status": "STARTED",
+    "message": "Indexation job started successfully. Use /status to track progress."
+  }
+  ```
+- **Response (Conflict - 400 Bad Request)**: 
+  ```json
+  {
+    "error": "Indexation already in progress. Please wait until it finishes."
   }
   ```
 
 ### Check Indexation Status
-- **URL**: `http://localhost:8080/blog-lucene-app/api/indexation/status/{jobId}`
+- **URL**: `http://localhost:8080/blog-lucene-app/api/indexation/status`
 - **Method**: GET
-- **Description**: Checks the status of an indexation job
-- **Response**:
+- **Description**: Checks the status of the current or last indexation job
+- **Response (In Progress)**:
   ```json
   {
-    "jobId": "uuid-string",
     "status": "IN_PROGRESS",
     "totalPages": 50,
     "processedPages": 25,
     "totalUsers": 2500,
     "message": "Processing page 25 of 50",
     "startTime": 1699999999999,
-    "endTime": null
+    "endTime": null,
+    "durationFormatted": null
+  }
+  ```
+  
+- **Response (Completed)**:
+  ```json
+  {
+    "status": "COMPLETED",
+    "totalPages": 50,
+    "processedPages": 50,
+    "totalUsers": 5000,
+    "message": "Indexation completed successfully. Total users indexed: 5000",
+    "startTime": 1699999999999,
+    "endTime": 1700000099999,
+    "durationFormatted": "1min 40s"
   }
   ```
 - **Status Values**: 
-  - `NOT_STARTED`: Job ID not found
+  - `NOT_STARTED`: No indexation has been run yet
   - `IN_PROGRESS`: Indexation is currently running
   - `COMPLETED`: Indexation finished successfully
   - `FAILED`: Indexation encountered an error
 
 ## Pattern Used: Asynchronous Job Pattern
 
-The indexation functionality implements the **Asynchronous Job Pattern** (also known as **Long-Running Task Pattern** or **Command Pattern with Status Tracking**).
+The indexation functionality implements the **Asynchronous Job Pattern** with a **Single Job Constraint**.
+
+### Key Features:
+- **Single Job at a Time**: Only one indexation can run simultaneously. Attempting to start a second job while one is running returns a 400 Bad Request.
+- **No UUID Required**: Simplified API without job IDs since there's only one job slot.
+- **Human-Readable Duration**: Duration is displayed as "1min 45s" instead of milliseconds.
 
 ### How it works:
-1. **Fire**: Client sends a POST request to `/indexation/start`
-2. **Acknowledge**: Server immediately returns a job ID without waiting for completion
-3. **Poll**: Client periodically checks the status using GET `/indexation/status/{jobId}`
-4. **Complete**: Status eventually changes to `COMPLETED` or `FAILED`
+1. **Start**: Client sends a POST request to `/indexation/start`
+2. **Acknowledge**: Server immediately returns success or error if already running
+3. **Poll**: Client periodically checks the status using GET `/indexation/status`
+4. **Complete**: Status eventually changes to `COMPLETED` or `FAILED`, then a new indexation can be started
 
 This pattern is ideal for long-running operations that would timeout in a synchronous request-response model.
 

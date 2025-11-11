@@ -3,14 +3,13 @@ package com.zouari.blog.resource;
 import com.zouari.blog.model.IndexationStatus;
 import com.zouari.blog.service.IndexationService;
 
-import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,30 +23,25 @@ public class IndexationResource {
     @Path("/start")
     @Produces(MediaType.APPLICATION_JSON)
     public Response startIndexation() {
-        try {
-            String jobId = indexationService.startIndexation();
-            Map<String, String> response = new HashMap<>();
-            response.put("jobId", jobId);
-            response.put("message", "Indexation started successfully");
-            return Response.accepted(response).build();
-        } catch (Exception e) {
+        boolean started = indexationService.startIndexation();
+
+        if (!started) {
             Map<String, String> error = new HashMap<>();
-            error.put("error", "Failed to start indexation: " + e.getMessage());
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(error).build();
+            error.put("error", "Indexation already in progress. Please wait until it finishes.");
+            return Response.status(Response.Status.BAD_REQUEST).entity(error).build();
         }
+
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "STARTED");
+        response.put("message", "Indexation job started successfully. Use /status to track progress.");
+        return Response.ok(response).build();
     }
 
     @GET
-    @Path("/status/{jobId}")
+    @Path("/status")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getStatus(@PathParam("jobId") String jobId) {
-        try {
-            IndexationStatus status = indexationService.getStatus(jobId);
-            return Response.ok(status).build();
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Failed to get status: " + e.getMessage());
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(error).build();
-        }
+    public Response getStatus() {
+        IndexationStatus status = indexationService.getStatus();
+        return Response.ok(status).build();
     }
 }

@@ -1,7 +1,6 @@
 package com.zouari.blog.model;
 
 public class IndexationStatus {
-    private String jobId;
     private Status status;
     private int totalPages;
     private int processedPages;
@@ -20,18 +19,10 @@ public class IndexationStatus {
     public IndexationStatus() {
     }
 
-    public IndexationStatus(String jobId, Status status) {
-        this.jobId = jobId;
+    public IndexationStatus(Status status) {
         this.status = status;
     }
 
-    public String getJobId() {
-        return jobId;
-    }
-
-    public void setJobId(String jobId) {
-        this.jobId = jobId;
-    }
 
     public Status getStatus() {
         return status;
@@ -87,5 +78,21 @@ public class IndexationStatus {
 
     public void setEndTime(Long endTime) {
         this.endTime = endTime;
+    }
+
+    public String getDurationFormatted() {
+        if (startTime != null && endTime != null) {
+            long durationMs = endTime - startTime;
+            long seconds = durationMs / 1000;
+            long minutes = seconds / 60;
+            long remainingSeconds = seconds % 60;
+
+            if (minutes > 0) {
+                return minutes + "min " + remainingSeconds + "s";
+            } else {
+                return remainingSeconds + "s";
+            }
+        }
+        return null;
     }
 }

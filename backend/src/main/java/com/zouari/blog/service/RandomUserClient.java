@@ -3,7 +3,7 @@ package com.zouari.blog.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zouari.blog.model.RandomUserResponse;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
