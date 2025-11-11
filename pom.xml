@@ -14,6 +14,7 @@
     <description>Blog project demonstrating Lucene search testing with in-memory index</description>
 
     <modules>
+        <module>frontend</module>
         <module>backend</module>
         <module>docker</module>
     </modules>

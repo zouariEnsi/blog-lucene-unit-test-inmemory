@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucene Indexation Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Lucene Indexation Manager</h1>
+            <p class="subtitle">Manage your user index with ease</p>
+        </header>
+
+        <main>
+            <div class="card" id="statusCard">
+                <h2>Current Index Status</h2>
+                <div id="existingIndexInfo" class="info-section">
+                    <p class="loading">Loading index information...</p>
+                </div>
+            </div>
+
+            <div class="card" id="controlCard">
+                <h2>Indexation Control</h2>
+                <div class="controls">
+                    <button id="startButton" class="btn btn-primary" onclick="startIndexation()">
+                        Start New Indexation
+                    </button>
+                </div>
+                <div id="progressSection" class="progress-section hidden">
+                    <div class="progress-info">
+                        <p id="statusMessage">Initializing...</p>
+                        <p id="progressPercentage" class="percentage">0%</p>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <div class="progress-details">
+                        <p id="progressDetails"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="historyCard">
+                <h2>Last Indexation</h2>
+                <div id="historyInfo" class="info-section">
+                    <p class="no-data">No indexation history available</p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Lucene Indexation Manager | Blog Demo Application</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
