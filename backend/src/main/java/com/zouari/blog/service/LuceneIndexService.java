@@ -1,13 +1,25 @@
 package com.zouari.blog.service;
 
 import com.zouari.blog.model.User;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.core.LowerCaseFilter;
+import org.apache.lucene.analysis.miscellaneous.ASCIIFoldingFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 
 import jakarta.annotation.PreDestroy;
@@ -16,6 +28,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -25,7 +38,7 @@ public class LuceneIndexService {
     private static final String INDEX_DIR = System.getProperty("java.io.tmpdir") + "/lucene-index";
 
     private FSDirectory directory;
-    private StandardAnalyzer analyzer;
+    private Analyzer analyzer;
     private volatile boolean initialized = false;
 
     private synchronized void ensureInitialized() {
@@ -34,7 +47,7 @@ public class LuceneIndexService {
                 Path indexPath = Paths.get(INDEX_DIR);
                 Files.createDirectories(indexPath);
                 this.directory = FSDirectory.open(indexPath);
-                this.analyzer = new StandardAnalyzer();
+                this.analyzer = createAnalyzer();
                 this.initialized = true;
                 LOGGER.info("Lucene index initialized at: " + INDEX_DIR);
             } catch (IOException e) {
@@ -42,6 +55,18 @@ public class LuceneIndexService {
                 throw new RuntimeException("Failed to initialize Lucene index", e);
             }
         }
+    }
+
+    private Analyzer createAnalyzer() {
+        return new Analyzer() {
+            @Override
+            protected TokenStreamComponents createComponents(String fieldName) {
+                StandardTokenizer tokenizer = new StandardTokenizer();
+                TokenStream filter = new LowerCaseFilter(tokenizer);
+                filter = new ASCIIFoldingFilter(filter);
+                return new TokenStreamComponents(tokenizer, filter);
+            }
+        };
     }
 
     public synchronized void indexUsers(List<User> users) throws IOException {
@@ -127,6 +152,88 @@ public class LuceneIndexService {
         }
         
         return doc;
+    }
+
+    public synchronized List<User> searchUsersByName(String name) throws IOException {
+        ensureInitialized();
+        
+        // Check if index exists and has documents
+        if (!DirectoryReader.indexExists(directory)) {
+            throw new IllegalStateException("Index not created. Please create index first.");
+        }
+        
+        List<User> results = new ArrayList<>();
+        
+        try (IndexReader reader = DirectoryReader.open(directory)) {
+            if (reader.numDocs() == 0) {
+                throw new IllegalStateException("Index not created. Please create index first.");
+            }
+            
+            IndexSearcher searcher = new IndexSearcher(reader);
+            
+            // Create a wildcard query for partial matching
+            String queryString = "*" + name.toLowerCase() + "*";
+            
+            // Search in firstName and lastName fields
+            String[] fields = {"firstName", "lastName"};
+            MultiFieldQueryParser parser = new MultiFieldQueryParser(fields, analyzer);
+            parser.setAllowLeadingWildcard(true);
+            
+            Query query = parser.parse(queryString);
+            
+            TopDocs topDocs = searcher.search(query, 100); // Limit to 100 results
+            
+            for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
+                Document doc = searcher.doc(scoreDoc.doc);
+                User user = convertDocumentToUser(doc);
+                results.add(user);
+            }
+            
+            LOGGER.info("Found " + results.size() + " users matching: " + name);
+        } catch (Exception e) {
+            LOGGER.severe("Error searching users: " + e.getMessage());
+            throw new IOException("Error searching users", e);
+        }
+        
+        return results;
+    }
+
+    private User convertDocumentToUser(Document doc) {
+        User user = new User();
+        
+        // Set login information
+        User.Login login = new User.Login();
+        login.setUuid(doc.get("uuid"));
+        login.setUsername(doc.get("username"));
+        user.setLogin(login);
+        
+        // Set name information
+        User.Name name = new User.Name();
+        name.setFirst(doc.get("firstName"));
+        name.setLast(doc.get("lastName"));
+        user.setName(name);
+        
+        // Set other fields
+        user.setEmail(doc.get("email"));
+        user.setGender(doc.get("gender"));
+        user.setPhone(doc.get("phone"));
+        user.setCell(doc.get("cell"));
+        user.setNat(doc.get("nationality"));
+        
+        // Set location information if available
+        String city = doc.get("city");
+        String country = doc.get("country");
+        String state = doc.get("state");
+        
+        if (city != null || country != null || state != null) {
+            User.Location location = new User.Location();
+            location.setCity(city);
+            location.setCountry(country);
+            location.setState(state);
+            user.setLocation(location);
+        }
+        
+        return user;
     }
 
     @PreDestroy
