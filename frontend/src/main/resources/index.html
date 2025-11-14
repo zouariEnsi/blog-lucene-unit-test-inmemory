@@ -14,38 +14,61 @@
         </header>
 
         <main>
-            <div class="card" id="statusCard">
-                <h2>Current Index Status</h2>
-                <div id="existingIndexInfo" class="info-section">
-                    <p class="loading">Loading index information...</p>
+            <!-- Tab Navigation -->
+            <div class="tabs">
+                <button class="tab-button active" onclick="switchTab('indexation')">Indexation</button>
+                <button class="tab-button" onclick="switchTab('search')">Search Users</button>
+            </div>
+
+            <!-- Indexation Tab -->
+            <div id="indexationTab" class="tab-content active">
+                <div class="card" id="statusCard">
+                    <h2>Current Index Status</h2>
+                    <div id="existingIndexInfo" class="info-section">
+                        <p class="loading">Loading index information...</p>
+                    </div>
+                </div>
+
+                <div class="card" id="controlCard">
+                    <h2>Indexation Control</h2>
+                    <div class="controls">
+                        <button id="startButton" class="btn btn-primary" onclick="startIndexation()">
+                            Start New Indexation
+                        </button>
+                    </div>
+                    <div id="progressSection" class="progress-section hidden">
+                        <div class="progress-info">
+                            <p id="statusMessage">Initializing...</p>
+                            <p id="progressPercentage" class="percentage">0%</p>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                        <div class="progress-details">
+                            <p id="progressDetails"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="historyCard">
+                    <h2>Last Indexation</h2>
+                    <div id="historyInfo" class="info-section">
+                        <p class="no-data">No indexation history available</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="card" id="controlCard">
-                <h2>Indexation Control</h2>
-                <div class="controls">
-                    <button id="startButton" class="btn btn-primary" onclick="startIndexation()">
-                        Start New Indexation
-                    </button>
-                </div>
-                <div id="progressSection" class="progress-section hidden">
-                    <div class="progress-info">
-                        <p id="statusMessage">Initializing...</p>
-                        <p id="progressPercentage" class="percentage">0%</p>
+            <!-- Search Tab -->
+            <div id="searchTab" class="tab-content">
+                <div class="card" id="searchCard">
+                    <h2>Search Users by Name</h2>
+                    <div class="search-form">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Enter user name (first or last name)...">
+                        <button id="searchButton" class="btn btn-primary" onclick="searchUsers()">Search</button>
                     </div>
-                    <div class="progress-bar">
-                        <div id="progressFill" class="progress-fill"></div>
+                    <div id="searchResults" class="search-results">
+                        <p class="no-data">Enter a name to search for users</p>
                     </div>
-                    <div class="progress-details">
-                        <p id="progressDetails"></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card" id="historyCard">
-                <h2>Last Indexation</h2>
-                <div id="historyInfo" class="info-section">
-                    <p class="no-data">No indexation history available</p>
                 </div>
             </div>
         </main>

@@ -280,3 +280,112 @@ function showError(message) {
 window.addEventListener('beforeunload', function() {
     stopPolling();
 });
+
+/**
+ * Switch between tabs
+ */
+function switchTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Show selected tab
+    if (tabName === 'indexation') {
+        document.getElementById('indexationTab').classList.add('active');
+        document.querySelectorAll('.tab-button')[0].classList.add('active');
+    } else if (tabName === 'search') {
+        document.getElementById('searchTab').classList.add('active');
+        document.querySelectorAll('.tab-button')[1].classList.add('active');
+    }
+}
+
+/**
+ * Search for users by name
+ */
+async function searchUsers() {
+    const searchInput = document.getElementById('searchInput');
+    const searchButton = document.getElementById('searchButton');
+    const searchResults = document.getElementById('searchResults');
+    const query = searchInput.value.trim();
+    
+    if (!query) {
+        searchResults.innerHTML = '<p class="no-data">Please enter a name to search</p>';
+        return;
+    }
+    
+    // Disable search button and show loading
+    searchButton.disabled = true;
+    searchResults.innerHTML = '<p class="search-loading">Searching...</p>';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/search/users?name=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to search users');
+        }
+        
+        // Display results
+        displaySearchResults(data);
+        
+    } catch (error) {
+        console.error('Error searching users:', error);
+        searchResults.innerHTML = `<div class="search-error">Error: ${error.message}</div>`;
+    } finally {
+        searchButton.disabled = false;
+    }
+}
+
+/**
+ * Display search results
+ */
+function displaySearchResults(users) {
+    const searchResults = document.getElementById('searchResults');
+    
+    if (!users || users.length === 0) {
+        searchResults.innerHTML = '<p class="no-data">No users found matching your search</p>';
+        return;
+    }
+    
+    let html = `<p class="search-count">Found ${users.length} user${users.length > 1 ? 's' : ''}</p>`;
+    
+    users.forEach(user => {
+        const title = user.name?.title || '';
+        const firstName = user.name?.first || '';
+        const lastName = user.name?.last || '';
+        const email = user.email || 'No email';
+        
+        const fullName = `${title} ${firstName} ${lastName}`.trim();
+        
+        html += `
+            <div class="user-card">
+                <div class="user-name">${fullName}</div>
+                <div class="user-email"><a href="mailto:${email}">${email}</a></div>
+            </div>
+        `;
+    });
+    
+    searchResults.innerHTML = html;
+}
+
+/**
+ * Handle Enter key in search input
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                searchUsers();
+            }
+        });
+    }
+});
