@@ -133,6 +133,47 @@ The application includes a modern web interface for managing Lucene indexation:
   - `COMPLETED`: Indexation finished successfully
   - `FAILED`: Indexation encountered an error
 
+### Search Users
+- **URL**: `http://localhost:8080/blog-lucene-app/api/search/users?name=<query>`
+- **Method**: GET
+- **Description**: Searches for users by name (first or last) in the Lucene index. The search is case-insensitive, supports partial matching, and normalizes accented characters (e.g., "Bro" matches "Bröcker").
+- **Query Parameters**:
+  - `name` (required): The search query string
+- **Response (Success - 200 OK)**:
+  ```json
+  [
+    {
+      "name": {
+        "first": "John",
+        "last": "Doe"
+      },
+      "email": "john.doe@example.com",
+      "login": {
+        "uuid": "abc-123",
+        "username": "johndoe"
+      },
+      ...
+    }
+  ]
+  ```
+- **Response (Bad Request - 400)**:
+  ```json
+  {
+    "error": "Query parameter 'name' is required"
+  }
+  ```
+- **Response (Index Not Created - 500)**:
+  ```json
+  {
+    "error": "Index not created. Please create index first."
+  }
+  ```
+- **Features**:
+  - **Case-insensitive**: Searches for "john", "JOHN", or "JoHn" return the same results
+  - **Normalized text**: Searches for "Bro" will match "Bröcker" (ASCII folding)
+  - **Partial matching**: Searches for "mit" will match "Smith"
+  - **Multi-field**: Searches in both firstName and lastName fields
+
 ## Pattern Used: Asynchronous Job Pattern
 
 The indexation functionality implements the **Asynchronous Job Pattern** with a **Single Job Constraint**.
