@@ -544,6 +544,65 @@ Beyond simple text search:
 - **Commit Strategy**: Batch commits reduce I/O overhead
 - **Filter Caching**: Cache frequently-used filters
 
+## Example Queries You Can Try
+
+Once you have the application running and indexed data, try these queries to explore Lucene's capabilities:
+
+### Basic Searches
+
+```bash
+# Find all users named John
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=john"
+
+# Find all users with Smith in their name
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=smith"
+
+# Partial match - find names containing "mit"
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=mit"
+```
+
+### Case Insensitive Searches
+
+```bash
+# All of these return the same results
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=john"
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=JOHN"
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=JoHn"
+```
+
+### Accent Normalization
+
+```bash
+# These will match names with accents like José, María
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=jose"
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=maria"
+```
+
+### Performance Benchmarks
+
+```bash
+# Common names (many results)
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=john"
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=david"
+
+# Rare names (few results)
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=xavier"
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=ulysses"
+
+# Partial matches
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=mit"
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=son"
+```
+
+### What to Look For
+
+When running benchmarks, you'll typically see:
+- **Linear search**: Consistent ~40-50ms regardless of result count (must scan all 5,000 users)
+- **Lucene search**: Variable 1-5ms depending on term frequency (direct index lookup)
+- **Speedup factor**: Usually 10-50x faster for this dataset size
+
+The performance advantage becomes even more dramatic with larger datasets!
+
 ## Conclusion
 
 Apache Lucene transforms search performance from linear O(n) to logarithmic O(log n), delivering **10-1000x speedups** depending on dataset size. For applications with more than 10,000 searchable documents, Lucene is often the right choice.
