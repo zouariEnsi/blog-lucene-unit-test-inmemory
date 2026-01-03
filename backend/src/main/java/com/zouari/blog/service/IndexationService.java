@@ -26,6 +26,9 @@ public class IndexationService {
     
     @Inject
     private LuceneIndexService luceneIndexService;
+    
+    @Inject
+    private SimpleSearchService simpleSearchService;
 
     public synchronized boolean startIndexation() {
         // Check if indexation is already in progress
@@ -56,8 +59,9 @@ public class IndexationService {
         List<User> allUsers = new ArrayList<>();
         
         try {
-            // Clear existing index before starting
+            // Clear existing indexes before starting
             luceneIndexService.clearIndex();
+            simpleSearchService.clearUsers();
             
             // Fetch users from all pages
             for (int page = 1; page <= TOTAL_PAGES; page++) {
@@ -83,10 +87,11 @@ public class IndexationService {
                 }
             }
             
-            // Index all users
+            // Index all users in both Lucene and simple search
             LOGGER.info("Indexing " + allUsers.size() + " users");
             currentStatus.setMessage("Indexing " + allUsers.size() + " users");
             luceneIndexService.indexUsers(allUsers);
+            simpleSearchService.storeUsers(allUsers);
             
             // Mark as completed
             currentStatus.setStatus(IndexationStatus.Status.COMPLETED);

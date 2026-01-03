@@ -29,11 +29,15 @@ This will:
 
 ## Running the Application
 
-### Using Docker
+### Option 1: Using Docker (Recommended)
 
 After building, you can run the application using Docker:
 
 ```bash
+# Build the entire project (includes frontend, backend, and Docker image)
+mvn clean install
+
+# Run the Docker container
 docker run -p 8080:8080 -p 9990:9990 blog-lucene-app:1.0.0-SNAPSHOT
 ```
 
@@ -41,6 +45,190 @@ The application will be available at:
 - **Frontend UI**: `http://localhost:8080/blog-lucene-app/index.html`
 - **REST API**: `http://localhost:8080/blog-lucene-app/api/`
 - **Management Console**: `http://localhost:9990/console` (admin/admin)
+
+### Option 2: Deploy to WildFly Manually
+
+If you have WildFly installed locally:
+
+```bash
+# Build the WAR file
+mvn clean package
+
+# Copy to WildFly deployments directory
+cp backend/target/blog-lucene-app.war $WILDFLY_HOME/standalone/deployments/
+
+# Start WildFly
+$WILDFLY_HOME/bin/standalone.sh
+```
+
+## Testing the Application
+
+### Automated Tests
+
+Run the complete test suite:
+
+```bash
+# Run all tests
+mvn test
+
+# Run tests for specific module
+mvn test -pl backend
+
+# Run a specific test class
+mvn test -pl backend -Dtest=LuceneIndexServiceTest
+```
+
+### Manual Testing via API
+
+#### 1. Check Health
+```bash
+curl http://localhost:8080/blog-lucene-app/api/health-check
+```
+
+Expected: `OK`
+
+#### 2. Start Indexation
+```bash
+curl -X POST http://localhost:8080/blog-lucene-app/api/indexation/start
+```
+
+Expected response:
+```json
+{
+  "status": "STARTED",
+  "message": "Indexation job started successfully. Use /status to track progress."
+}
+```
+
+#### 3. Check Indexation Status
+```bash
+curl http://localhost:8080/blog-lucene-app/api/indexation/status
+```
+
+Expected response (in progress):
+```json
+{
+  "status": "IN_PROGRESS",
+  "totalPages": 50,
+  "processedPages": 25,
+  "totalUsers": 2500,
+  "message": "Processing page 25 of 50",
+  "startTime": 1699999999999,
+  "endTime": null,
+  "durationFormatted": null
+}
+```
+
+Wait for completion (status becomes "COMPLETED").
+
+#### 4. Search Users
+```bash
+# Search by name
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=john"
+
+# Search with partial match
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=mit"
+
+# Search with special characters (will be normalized)
+curl "http://localhost:8080/blog-lucene-app/api/search/users?name=jose"
+```
+
+Expected response:
+```json
+[
+  {
+    "name": {
+      "first": "John",
+      "last": "Doe"
+    },
+    "email": "john.doe@example.com",
+    "login": {
+      "uuid": "abc-123",
+      "username": "johndoe"
+    }
+  }
+]
+```
+
+#### 5. Compare Performance (Benchmark)
+```bash
+# Run performance comparison between linear search and Lucene
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=john"
+```
+
+Expected response:
+```json
+{
+  "searchTerm": "john",
+  "simpleSearch": {
+    "resultsCount": 127,
+    "timeMs": 45,
+    "method": "Linear Search (O(n))"
+  },
+  "luceneSearch": {
+    "resultsCount": 127,
+    "timeMs": 3,
+    "method": "Lucene Inverted Index"
+  },
+  "speedupFactor": "15.00x",
+  "improvementPercentage": "1400.0%",
+  "totalDocuments": 5000
+}
+```
+
+### Manual Testing via Web UI
+
+1. **Open the application**: Navigate to `http://localhost:8080/blog-lucene-app/index.html`
+
+2. **Index Users**:
+   - Click the "Indexation" tab
+   - Click "START NEW INDEXATION" button
+   - Watch the progress bar update automatically
+   - Wait for completion (shows duration and total users)
+
+3. **Search Users**:
+   - Click the "Search Users" tab
+   - Enter a name (e.g., "john", "smith", "mit")
+   - Click "Search" or press Enter
+   - View the results with names and emails
+
+4. **Test Search Features**:
+   - **Case-insensitive**: Try "JOHN", "john", "John" - all return same results
+   - **Partial matching**: Try "mit" - matches "Smith"
+   - **Normalized text**: Try "jose" - matches "José"
+   - **Multiple fields**: Searches both first name and last name
+
+### Performance Benchmarking
+
+To measure and compare performance:
+
+```bash
+# Benchmark with common name
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=john"
+
+# Benchmark with rare name
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=xavier"
+
+# Benchmark with partial match
+curl "http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=mit"
+```
+
+The benchmark endpoint:
+- Warms up both search methods
+- Measures time in milliseconds
+- Compares linear search vs Lucene
+- Reports speedup factor and improvement percentage
+
+### Load Testing
+
+For load testing, use tools like Apache JMeter or `ab`:
+
+```bash
+# Using Apache Bench (ab)
+ab -n 1000 -c 10 "http://localhost:8080/blog-lucene-app/api/search/users?name=john"
+```
+
+This sends 1000 requests with 10 concurrent connections.
 
 ## Frontend Interface
 
@@ -173,6 +361,42 @@ The application includes a modern web interface for managing Lucene indexation:
   - **Normalized text**: Searches for "Bro" will match "Bröcker" (ASCII folding)
   - **Partial matching**: Searches for "mit" will match "Smith"
   - **Multi-field**: Searches in both firstName and lastName fields
+
+### Benchmark Search Performance
+- **URL**: `http://localhost:8080/blog-lucene-app/api/benchmark/compare?name=<query>`
+- **Method**: GET
+- **Description**: Compares search performance between linear search and Lucene search for the same query. Returns timing metrics and speedup factor.
+- **Query Parameters**:
+  - `name` (required): The search query string to benchmark
+- **Response (Success - 200 OK)**:
+  ```json
+  {
+    "searchTerm": "john",
+    "simpleSearch": {
+      "resultsCount": 127,
+      "timeMs": 45,
+      "method": "Linear Search (O(n))"
+    },
+    "luceneSearch": {
+      "resultsCount": 127,
+      "timeMs": 3,
+      "method": "Lucene Inverted Index"
+    },
+    "speedupFactor": "15.00x",
+    "improvementPercentage": "1400.0%",
+    "totalDocuments": 5000
+  }
+  ```
+- **Response (Bad Request - 400)**:
+  ```json
+  {
+    "error": "Query parameter 'name' is required"
+  }
+  ```
+- **Use Cases**:
+  - Performance testing and validation
+  - Demonstrating Lucene's speed advantages
+  - Comparing different query patterns
 
 ## Pattern Used: Asynchronous Job Pattern
 
